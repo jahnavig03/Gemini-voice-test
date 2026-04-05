@@ -34,6 +34,13 @@ function formatGeminiUserError(err) {
             code: "GEMINI_API_KEY",
         };
     }
+    if (/429/.test(raw) ||
+        /too many requests|exceeded your current quota|resource_exhausted|rate limit/i.test(lower)) {
+        return {
+            message: "Gemini rate limit or quota exceeded (429). Wait a few minutes, try again later, or check plan and quotas: https://ai.google.dev/gemini-api/docs/rate-limits",
+            code: "GEMINI_QUOTA",
+        };
+    }
     const msg = raw.length > 320 ? `${raw.slice(0, 317)}…` : raw;
     return { message: msg, code: "GEMINI_ERROR" };
 }
