@@ -16,10 +16,18 @@ const gemini_live_1 = require("./gemini-live");
 const prompts_1 = require("./prompts");
 const metrics_1 = require("./metrics");
 const gemini_errors_1 = require("./gemini-errors");
-/** REST JSON for upstream Gemini / config failures (502). */
+/** REST JSON for upstream Gemini / config failures (502; 429 when quota). */
 function jsonGeminiError(res, err, status = 502) {
     const f = (0, gemini_errors_1.formatGeminiUserError)(err);
-    res.status(status).json({ error: f.message, errorCode: f.code });
+    const httpStatus = f.code === "GEMINI_QUOTA" ? 429 : status;
+    if (f.retryAfterSeconds != null) {
+        res.set("Retry-After", String(f.retryAfterSeconds));
+    }
+    res.status(httpStatus).json({
+        error: f.message,
+        errorCode: f.code,
+        ...(f.retryAfterSeconds != null ? { retryAfterSeconds: f.retryAfterSeconds } : {}),
+    });
 }
 // ── App bootstrap ─────────────────────────────────────────────────
 const app = (0, express_1.default)();

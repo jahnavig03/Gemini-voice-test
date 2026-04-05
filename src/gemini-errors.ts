@@ -4,6 +4,8 @@ export interface GeminiUserError {
   message: string;
   /** Stable code for clients (e.g. show setup instructions) */
   code?: string;
+  /** Hint for HTTP Retry-After (seconds) when throttled */
+  retryAfterSeconds?: number;
 }
 
 /**
@@ -35,6 +37,7 @@ export function formatGeminiUserError(err: unknown): GeminiUserError {
       message:
         "Gemini rate limit or quota exceeded (429). Wait a few minutes, try again later, or check plan and quotas: https://ai.google.dev/gemini-api/docs/rate-limits",
       code: "GEMINI_QUOTA",
+      retryAfterSeconds: 60,
     };
   }
 

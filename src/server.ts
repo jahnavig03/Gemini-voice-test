@@ -26,10 +26,18 @@ import {
 } from "./metrics";
 import { formatGeminiUserError } from "./gemini-errors";
 
-/** REST JSON for upstream Gemini / config failures (502). */
+/** REST JSON for upstream Gemini / config failures (502; 429 when quota). */
 function jsonGeminiError(res: Response, err: unknown, status = 502) {
   const f = formatGeminiUserError(err);
-  res.status(status).json({ error: f.message, errorCode: f.code });
+  const httpStatus = f.code === "GEMINI_QUOTA" ? 429 : status;
+  if (f.retryAfterSeconds != null) {
+    res.set("Retry-After", String(f.retryAfterSeconds));
+  }
+  res.status(httpStatus).json({
+    error: f.message,
+    errorCode: f.code,
+    ...(f.retryAfterSeconds != null ? { retryAfterSeconds: f.retryAfterSeconds } : {}),
+  });
 }
 
 // ── App bootstrap ─────────────────────────────────────────────────

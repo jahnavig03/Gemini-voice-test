@@ -21,6 +21,7 @@ function formatGeminiUserError(err) {
         return {
             message: "Gemini rate limit or quota exceeded (429). Wait a few minutes, try again later, or check plan and quotas: https://ai.google.dev/gemini-api/docs/rate-limits",
             code: "GEMINI_QUOTA",
+            retryAfterSeconds: 60,
         };
     }
     if (/403/.test(raw) &&
