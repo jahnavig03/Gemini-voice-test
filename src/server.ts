@@ -28,7 +28,7 @@ import {
 // ── App bootstrap ─────────────────────────────────────────────────
 
 const app    = express();
-const PORT   = process.env.PORT ?? 3030;
+const PORT   = process.env.PORT ?? 8080;
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
