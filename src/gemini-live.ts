@@ -8,6 +8,7 @@ import {
 } from "@google/genai";
 import { IPL_SYSTEM_PROMPT } from "./prompts";
 import { formatGeminiUserError } from "./gemini-errors";
+import { getGeminiApiKey } from "./env-gemini";
 
 // ── Callback surface exposed to server.ts ─────────────────────────
 
@@ -60,8 +61,7 @@ export class GeminiLiveService {
   private ai: GoogleGenAI;
 
   constructor() {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("GEMINI_API_KEY not set");
+    const key = getGeminiApiKey();
     // Live preview models (gemini-*-live-preview-*) only exist on v1alpha,
     // not on the default v1beta endpoint.
     this.ai = new GoogleGenAI({ apiKey: key, apiVersion: "v1alpha" });

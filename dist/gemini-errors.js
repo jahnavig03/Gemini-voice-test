@@ -9,9 +9,9 @@ exports.formatGeminiUserError = formatGeminiUserError;
 function formatGeminiUserError(err) {
     const raw = err instanceof Error ? err.message : String(err);
     const lower = raw.toLowerCase();
-    if (/gemini_api_key is not set|gemini_api_key not set|not set in \.env/i.test(raw)) {
+    if (/gemini_api_key is not set|gemini_api_key not set|not set in \.env|no gemini api key/i.test(raw)) {
         return {
-            message: "Server is missing GEMINI_API_KEY. Add it in your host’s environment (e.g. Railway → Variables).",
+            message: "Server is missing a Gemini API key. In Railway → Variables set GEMINI_API_KEY (or GOOGLE_API_KEY).",
             code: "GEMINI_API_KEY",
         };
     }

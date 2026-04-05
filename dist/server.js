@@ -23,7 +23,7 @@ function jsonGeminiError(res, err, status = 502) {
 }
 // ── App bootstrap ─────────────────────────────────────────────────
 const app = (0, express_1.default)();
-const PORT = process.env.PORT ?? 3030;
+const PORT = process.env.PORT ?? 8080;
 const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());

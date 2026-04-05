@@ -5,6 +5,7 @@ exports.GeminiLiveService = void 0;
 const genai_1 = require("@google/genai");
 const prompts_1 = require("./prompts");
 const gemini_errors_1 = require("./gemini-errors");
+const env_gemini_1 = require("./env-gemini");
 // ── Service ───────────────────────────────────────────────────────
 function parseLiveMs(raw, fallback, min, max) {
     const n = parseInt(raw ?? "", 10);
@@ -14,9 +15,7 @@ function parseLiveMs(raw, fallback, min, max) {
 }
 class GeminiLiveService {
     constructor() {
-        const key = process.env.GEMINI_API_KEY;
-        if (!key)
-            throw new Error("GEMINI_API_KEY not set");
+        const key = (0, env_gemini_1.getGeminiApiKey)();
         // Live preview models (gemini-*-live-preview-*) only exist on v1alpha,
         // not on the default v1beta endpoint.
         this.ai = new genai_1.GoogleGenAI({ apiKey: key, apiVersion: "v1alpha" });

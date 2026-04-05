@@ -7,6 +7,7 @@ exports.assertAsciiEnglishUserCaption = assertAsciiEnglishUserCaption;
 const generative_ai_1 = require("@google/generative-ai");
 const elevenlabs_js_1 = require("@elevenlabs/elevenlabs-js");
 const prompts_1 = require("./prompts");
+const env_gemini_1 = require("./env-gemini");
 /** Scripts we never show in the live user caption bubble (must be English / Latin). */
 const NON_LATIN_DISPLAY_SCRIPT_RE = /[\u0900-\u0AFF\u0980-\u09FF\u0A00-\u0AFF\u0B00-\u0B7F\u0C00-\u0C7F\u0600-\u06FF\u0590-\u05FF\u0400-\u04FF\u0370-\u03FF\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF\u0E00-\u0E7F]/;
 function captionContainsBlockedScript(s) {
@@ -44,10 +45,7 @@ function assertAsciiEnglishUserCaption(s) {
 class GeminiService {
     constructor() {
         this.sessions = new Map();
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey)
-            throw new Error("GEMINI_API_KEY is not set in .env");
-        this.client = new generative_ai_1.GoogleGenerativeAI(apiKey);
+        this.client = new generative_ai_1.GoogleGenerativeAI((0, env_gemini_1.getGeminiApiKey)());
     }
     getSession(sessionId) {
         if (!this.sessions.has(sessionId)) {

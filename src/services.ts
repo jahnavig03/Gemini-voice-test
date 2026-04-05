@@ -2,6 +2,7 @@
 import { GoogleGenerativeAI, ChatSession } from "@google/generative-ai";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { IPL_SYSTEM_PROMPT, OPENING_GREET_USER_TURN } from "./prompts";
+import { getGeminiApiKey } from "./env-gemini";
 
 /** Scripts we never show in the live user caption bubble (must be English / Latin). */
 const NON_LATIN_DISPLAY_SCRIPT_RE =
@@ -44,9 +45,7 @@ export class GeminiService {
   private sessions: Map<string, ChatSession> = new Map();
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY is not set in .env");
-    this.client = new GoogleGenerativeAI(apiKey);
+    this.client = new GoogleGenerativeAI(getGeminiApiKey());
   }
 
   private getSession(sessionId: string): ChatSession {
