@@ -26,22 +26,28 @@ export function formatGeminiUserError(err: unknown): GeminiUserError {
     };
   }
 
+  // Before 403: Google formats many errors as "[403 Forbidden] …" — do not treat "Forbidden" alone as "leaked key".
+  if (
+    /429/.test(raw) ||
+    /too many requests|exceeded your current quota|resource_exhausted|rate limit/i.test(lower)
+  ) {
+    return {
+      message:
+        "Gemini rate limit or quota exceeded (429). Wait a few minutes, try again later, or check plan and quotas: https://ai.google.dev/gemini-api/docs/rate-limits",
+      code: "GEMINI_QUOTA",
+    };
+  }
+
   if (
     /403/.test(raw) &&
-    /forbidden|leaked|revoked|invalid api key|api key invalid|blocked/i.test(raw)
+    /reported as leaked|was leaked|invalid api key|api key invalid|api key not valid|incorrect api key|wrong api key/i.test(
+      raw
+    )
   ) {
     return {
       message:
         "Gemini rejected the API key (invalid, revoked, or reported as leaked). Create a **new** key in Google AI Studio and update GEMINI_API_KEY in Railway Variables — do not reuse a key that was ever committed or pasted publicly.",
       code: "GEMINI_API_KEY",
-    };
-  }
-
-  if (/403/.test(raw) || /\bforbidden\b/i.test(lower)) {
-    return {
-      message:
-        "Gemini returned Forbidden — check the API key, billing, and that the model is enabled for your project.",
-      code: "GEMINI_FORBIDDEN",
     };
   }
 
@@ -52,14 +58,11 @@ export function formatGeminiUserError(err: unknown): GeminiUserError {
     };
   }
 
-  if (
-    /429/.test(raw) ||
-    /too many requests|exceeded your current quota|resource_exhausted|rate limit/i.test(lower)
-  ) {
+  if (/403/.test(raw) || /\bforbidden\b/i.test(lower)) {
     return {
       message:
-        "Gemini rate limit or quota exceeded (429). Wait a few minutes, try again later, or check plan and quotas: https://ai.google.dev/gemini-api/docs/rate-limits",
-      code: "GEMINI_QUOTA",
+        "Gemini returned Forbidden — check the API key, billing, and that the model is enabled for your project.",
+      code: "GEMINI_FORBIDDEN",
     };
   }
 
