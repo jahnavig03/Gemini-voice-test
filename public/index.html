@@ -269,10 +269,19 @@ function toggleWidget() {
 
 let welcomeInFlight = false;
 
+/** One Gemini welcome call per tab session (cleared on New session) — cuts repeat 429s when reopening the widget. */
+const WELCOME_API_ONCE_KEY = "ipl_welcome_api_v1";
+const STATIC_OPENING_GREETING =
+  "Hey! I'm here for IPL 2026 — fixtures, teams, tickets, you name it. Type something or tap the mic to talk live.";
+
 /** First time the thread is empty (open widget or new session): fetch a natural bot greeting. */
 async function requestOpeningWelcomeIfEmpty() {
   const msgs = document.getElementById("msgs");
   if (msgs.children.length > 0 || welcomeInFlight) return;
+  if (sessionStorage.getItem(WELCOME_API_ONCE_KEY) === "1") {
+    addMsg("bot", STATIC_OPENING_GREETING);
+    return;
+  }
   welcomeInFlight = true;
   setBusy(true);
   try {
@@ -292,14 +301,12 @@ async function requestOpeningWelcomeIfEmpty() {
     if (data.message && msgs.children.length === 0) addMsg("bot", data.message);
   } catch (e) {
     if (msgs.children.length === 0) {
-      addMsg(
-        "bot",
-        "Hey! I'm here for IPL 2026 — fixtures, teams, tickets, you name it. Type something or tap the mic to talk live."
-      );
+      addMsg("bot", STATIC_OPENING_GREETING);
     }
   } finally {
     welcomeInFlight = false;
     setBusy(false);
+    sessionStorage.setItem(WELCOME_API_ONCE_KEY, "1");
   }
 }
 
@@ -697,6 +704,7 @@ async function newSession() {
   if (liveActive) stopLive();
   await fetch(`/api/voice/session/${sessionId}`, { method: "DELETE" }).catch(() => {});
   sessionId = crypto.randomUUID();
+  sessionStorage.removeItem(WELCOME_API_ONCE_KEY);
   document.getElementById("msgs").innerHTML = "";
   requestOpeningWelcomeIfEmpty();
 }
