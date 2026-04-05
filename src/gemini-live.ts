@@ -7,6 +7,7 @@ import {
   ActivityHandling,
 } from "@google/genai";
 import { IPL_SYSTEM_PROMPT } from "./prompts";
+import { formatGeminiUserError } from "./gemini-errors";
 
 // ── Callback surface exposed to server.ts ─────────────────────────
 
@@ -218,17 +219,36 @@ export class GeminiLiveService {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onclose: (e: any) => {
-          const reason = e?.reason ? `  reason="${e.reason}"` : "";
-          const clean  = e?.wasClean !== undefined ? `  wasClean=${e.wasClean}` : "";
-          console.log(`[Live] 🔌 Closed  code=${e?.code}${reason}${clean}`);
-          if (e?.code === 1008) {
+          const code = e?.code;
+          const reasonRaw = e?.reason;
+          const reasonStr =
+            typeof reasonRaw === "string"
+              ? reasonRaw
+              : reasonRaw instanceof ArrayBuffer
+                ? new TextDecoder().decode(reasonRaw)
+                : String(reasonRaw ?? "");
+          const reasonLog = reasonStr ? `  reason="${reasonStr.slice(0, 200)}"` : "";
+          const clean = e?.wasClean !== undefined ? `  wasClean=${e.wasClean}` : "";
+          console.log(`[Live] 🔌 Closed  code=${code}${reasonLog}${clean}`);
+
+          if (code === 1008) {
             console.error(
               "[Live] ⛔ Policy Violation (1008) — the model name is likely invalid or " +
-              "this API key does not have Live API access.\n" +
-              `       Current model: "${model}"\n` +
-              "       Try: gemini-2.0-flash-live-preview-04-09  or  gemini-live-2.5-flash-preview"
+                "this API key does not have Live API access.\n" +
+                `       Current model: "${model}"\n` +
+                "       Try: gemini-2.0-flash-live-preview-04-09  or  gemini-live-2.5-flash-preview"
             );
+            const f = formatGeminiUserError(
+              new Error(
+                `403 Forbidden Live WebSocket (code 1008). Model may be invalid or this API key lacks Live API access. Current model: ${model}`
+              )
+            );
+            cb.onError(new Error(f.message));
+          } else if (/leaked|403|forbidden|invalid api key|api key/i.test(reasonStr)) {
+            const f = formatGeminiUserError(new Error(reasonStr));
+            cb.onError(new Error(f.message));
           }
+
           cb.onClose();
         },
       },

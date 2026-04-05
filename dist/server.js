@@ -15,6 +15,12 @@ const services_1 = require("./services");
 const gemini_live_1 = require("./gemini-live");
 const prompts_1 = require("./prompts");
 const metrics_1 = require("./metrics");
+const gemini_errors_1 = require("./gemini-errors");
+/** REST JSON for upstream Gemini / config failures (502). */
+function jsonGeminiError(res, err, status = 502) {
+    const f = (0, gemini_errors_1.formatGeminiUserError)(err);
+    res.status(status).json({ error: f.message, errorCode: f.code });
+}
 // ── App bootstrap ─────────────────────────────────────────────────
 const app = (0, express_1.default)();
 const PORT = process.env.PORT ?? 3030;
@@ -75,7 +81,7 @@ app.post("/api/voice/turn", upload.single("audio"), async (req, res) => {
         res.send(audio);
     }
     catch (err) {
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        jsonGeminiError(res, err);
     }
 });
 // ── REST: text turn (Gemini only — text reply, no TTS) ───────────
@@ -110,7 +116,7 @@ app.post("/api/voice/text-turn", async (req, res) => {
         });
     }
     catch (err) {
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        jsonGeminiError(res, err);
     }
 });
 // ── REST: natural opening welcome (does not log a turn or touch chat history) ──
@@ -120,7 +126,7 @@ app.post("/api/voice/welcome", async (_req, res) => {
         res.json({ message });
     }
     catch (err) {
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        jsonGeminiError(res, err);
     }
 });
 // ── REST: session management ──────────────────────────────────────
@@ -135,7 +141,13 @@ app.get("/api/voice/metrics", (_req, res) => {
     res.json({ summary: (0, metrics_1.getSummary)(), turns: (0, metrics_1.getMetrics)() });
 });
 app.get("/health", (_req, res) => {
-    res.json({ status: "ok", model: process.env.GEMINI_LIVE_MODEL ?? "gemini-2.5-flash-preview-native-audio-dialog" });
+    res.json({
+        status: "ok",
+        model: process.env.GEMINI_LIVE_MODEL ?? "gemini-2.5-flash-preview-native-audio-dialog",
+        /** Present on builds that use formatGeminiUserError + errorCode on failed Gemini REST calls */
+        apiErrorShape: "v2",
+        gitCommit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
+    });
 });
 app.get("*", (_req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../public/index.html"));
@@ -287,7 +299,8 @@ wss.on("connection", (ws) => {
                         },
                         onError(err) {
                             console.error("[WS] Live error:", err.message);
-                            send({ type: "error", message: err.message });
+                            const f = (0, gemini_errors_1.formatGeminiUserError)(err);
+                            send({ type: "error", message: f.message, errorCode: f.code });
                         },
                         onClose() {
                             send({ type: "closed" });
@@ -306,7 +319,12 @@ wss.on("connection", (ws) => {
                     send({ type: "ready", sessionId });
                 }
                 catch (err) {
-                    send({ type: "error", message: err instanceof Error ? err.message : String(err) });
+                    const f = (0, gemini_errors_1.formatGeminiUserError)(err);
+                    send({
+                        type: "error",
+                        message: f.message,
+                        errorCode: f.code,
+                    });
                 }
                 break;
             }

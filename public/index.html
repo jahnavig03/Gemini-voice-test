@@ -282,7 +282,13 @@ async function requestOpeningWelcomeIfEmpty() {
       body: JSON.stringify({ sessionId }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error ?? res.statusText);
+    if (!res.ok) {
+      if (data.errorCode && msgs.children.length === 0) {
+        addMsg("bot", "⚠️ " + (data.error ?? res.statusText));
+        return;
+      }
+      throw new Error(data.error ?? res.statusText);
+    }
     if (data.message && msgs.children.length === 0) addMsg("bot", data.message);
   } catch (e) {
     if (msgs.children.length === 0) {
@@ -669,7 +675,13 @@ async function sendText() {
       body: JSON.stringify({ text, sessionId }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error ?? res.statusText);
+    if (!res.ok) {
+      if (data.errorCode) {
+        addMsg("bot", "⚠️ " + (data.error ?? res.statusText));
+        return;
+      }
+      throw new Error(data.error ?? res.statusText);
+    }
     addMsg("bot", data.reply ?? "");
   } catch (e) {
     addMsg("bot", "⚠️ " + e.message);

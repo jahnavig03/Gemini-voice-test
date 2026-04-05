@@ -1,0 +1,8 @@
+# https://docs.railway.com/reference/config-as-code
+[build]
+builder = "nixpacks"
+# Install devDependencies too (typescript) so `tsc` exists; then compile fresh dist/.
+buildCommand = "NPM_CONFIG_PRODUCTION=false npm ci && npm run build"
+
+[deploy]
+startCommand = "npm start"

@@ -24,6 +24,13 @@ import {
   computeResponseQuality,
   computeTranscriptAccuracy,
 } from "./metrics";
+import { formatGeminiUserError } from "./gemini-errors";
+
+/** REST JSON for upstream Gemini / config failures (502). */
+function jsonGeminiError(res: Response, err: unknown, status = 502) {
+  const f = formatGeminiUserError(err);
+  res.status(status).json({ error: f.message, errorCode: f.code });
+}
 
 // ── App bootstrap ─────────────────────────────────────────────────
 
@@ -94,7 +101,7 @@ app.post("/api/voice/turn", upload.single("audio"), async (req: Request, res: Re
     });
     res.send(audio);
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    jsonGeminiError(res, err);
   }
 });
 
@@ -133,7 +140,7 @@ app.post("/api/voice/text-turn", async (req: Request, res: Response) => {
       latencyMs: { llm: llm_ms, total: total_ms },
     });
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    jsonGeminiError(res, err);
   }
 });
 
@@ -144,7 +151,7 @@ app.post("/api/voice/welcome", async (_req: Request, res: Response) => {
     const message = await gemini.welcomeChatOpening();
     res.json({ message });
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    jsonGeminiError(res, err);
   }
 });
 
@@ -163,7 +170,13 @@ app.get("/api/voice/metrics", (_req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", model: process.env.GEMINI_LIVE_MODEL ?? "gemini-2.5-flash-preview-native-audio-dialog" });
+  res.json({
+    status: "ok",
+    model: process.env.GEMINI_LIVE_MODEL ?? "gemini-2.5-flash-preview-native-audio-dialog",
+    /** Present on builds that use formatGeminiUserError + errorCode on failed Gemini REST calls */
+    apiErrorShape: "v2",
+    gitCommit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
+  });
 });
 
 app.get("*", (_req, res) => {
@@ -342,7 +355,8 @@ wss.on("connection", (ws: WebSocket) => {
             },
             onError(err) {
               console.error("[WS] Live error:", err.message);
-              send({ type: "error", message: err.message });
+              const f = formatGeminiUserError(err);
+              send({ type: "error", message: f.message, errorCode: f.code });
             },
             onClose() {
               send({ type: "closed" });
@@ -361,7 +375,12 @@ wss.on("connection", (ws: WebSocket) => {
           };
           send({ type: "ready", sessionId });
         } catch (err) {
-          send({ type: "error", message: err instanceof Error ? err.message : String(err) });
+          const f = formatGeminiUserError(err);
+          send({
+            type: "error",
+            message: f.message,
+            errorCode: f.code,
+          });
         }
         break;
       }
